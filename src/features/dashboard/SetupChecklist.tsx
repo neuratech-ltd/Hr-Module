@@ -9,7 +9,7 @@ export function SetupChecklist() {
   const { data } = useHR()
   const steps = [
     { done: data.departments.length > 0, title: 'Add departments', text: 'e.g. Engineering, Finance', to: '/admin/departments' },
-    { done: data.designations.length > 0, title: 'Add designations', text: 'Job titles for each department', to: '/admin/departments' },
+    { done: data.designations.length > 0, title: 'Add designations', text: 'Job titles used in the company', to: '/admin/departments' },
     { done: data.leaveTypes.length > 0, title: 'Set up leave types', text: 'Casual, Annual, Sick and their yearly quotas', to: '/admin/leave/types' },
     { done: data.holidays.length > 0, title: 'Add public holidays', text: 'Excluded from leave and attendance', to: '/admin/holidays' },
     { done: data.employees.length > 0, title: 'Create employee profiles', text: 'A login account is created for each', to: '/admin/employees/new' },

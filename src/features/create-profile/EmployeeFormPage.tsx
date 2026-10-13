@@ -183,7 +183,7 @@ export function EmployeeFormPage({ selfSignup = false }: { selfSignup?: boolean 
   const text = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     set(key, e.target.value as never)
 
-  const designations = data.designations.filter((d) => d.department === Number(form.department))
+  const designations = data.designations
 
   const onPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -401,7 +401,7 @@ export function EmployeeFormPage({ selfSignup = false }: { selfSignup?: boolean 
               <NativeSelect
                 id="department"
                 value={form.department}
-                onChange={(e) => patch({ department: e.target.value, designation: '' })}
+                onChange={text('department')}
                 aria-invalid={!!errors.department}
               >
                 <option value="" disabled>
@@ -419,17 +419,15 @@ export function EmployeeFormPage({ selfSignup = false }: { selfSignup?: boolean 
               htmlFor="designation"
               required
               error={errors.designation}
-              hint={form.department && designations.length === 0 ? 'No designations in this department yet.' : undefined}
-            >
+              >
               <NativeSelect
                 id="designation"
                 value={form.designation}
                 onChange={text('designation')}
-                disabled={!form.department}
-                aria-invalid={!!errors.designation}
+                                aria-invalid={!!errors.designation}
               >
                 <option value="" disabled>
-                  {form.department ? 'Select designation' : 'Select a department first'}
+                  Select designation
                 </option>
                 {designations.map((d) => (
                   <option key={d.id} value={d.id}>

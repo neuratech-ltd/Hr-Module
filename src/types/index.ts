@@ -21,10 +21,10 @@ export interface Department {
   code: string
 }
 
+/** Job title. One company-wide list, usable in any department. */
 export interface Designation {
   id: number
   title: string
-  department: number
 }
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER'

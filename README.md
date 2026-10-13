@@ -18,7 +18,7 @@ npm run dev
 ## First run
 
 1. Open the app — the login page appears. On the **HR / Admin** tab, click **Create HR / Admin account** to create the first admin (this button disappears once an admin exists).
-2. Follow the **Get started** checklist on the dashboard: departments → designations →
+2. Departments and designations come pre-filled with the company lists (editable under **Departments**). Follow the **Get started** checklist on the dashboard: departments → designations →
    leave types → holidays → employees.
 3. Employee profiles are created in two ways:
    - **HR / Admin** adds them under **Employees -> Add employee** and sets the login password (SRS 3).

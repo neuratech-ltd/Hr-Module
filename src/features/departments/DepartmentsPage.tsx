@@ -15,12 +15,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { EmptyState, Field, NativeSelect, PageHeader } from '@/components/common'
-import { departmentName } from '@/lib/hr'
+import { EmptyState, Field, PageHeader } from '@/components/common'
 import type { Department, Designation } from '@/types'
 
 type DeptDraft = { id?: number; name: string; code: string }
-type DesigDraft = { id?: number; title: string; department: string }
+type DesigDraft = { id?: number; title: string }
 type DeleteTarget = { kind: 'department'; item: Department } | { kind: 'designation'; item: Designation }
 
 function RowActions({ label, onEdit, onDelete }: { label: string; onEdit: () => void; onDelete: () => void }) {
@@ -112,9 +111,9 @@ function DepartmentDialog({ draft, onClose }: { draft: DeptDraft | null; onClose
 }
 
 function DesignationDialog({ draft, onClose }: { draft: DesigDraft | null; onClose: () => void }) {
-  const { data, saveDesignation } = useHR()
-  const [form, setForm] = useState<DesigDraft>({ title: '', department: '' })
-  const [errors, setErrors] = useState<{ title?: string; department?: string }>({})
+  const { saveDesignation } = useHR()
+  const [form, setForm] = useState<DesigDraft>({ title: '' })
+  const [errors, setErrors] = useState<{ title?: string }>({})
   const [opened, setOpened] = useState<DesigDraft | null>(null)
   if (draft && draft !== opened) {
     setOpened(draft)
@@ -127,23 +126,15 @@ function DesignationDialog({ draft, onClose }: { draft: DesigDraft | null; onClo
     const title = form.title.trim()
     const errs: typeof errors = {}
     if (!title) errs.title = 'Title is required.'
-    if (!form.department) errs.department = 'Select a department.'
-    if (
-      title &&
-      form.department &&
-      data.designations.some(
-        (d) => d.id !== form.id && d.department === Number(form.department) && d.title.toLowerCase() === title.toLowerCase(),
-      )
-    )
-      errs.title = 'This department already has a designation with this title.'
     setErrors(errs)
     if (Object.keys(errs).length) return
     try {
-      saveDesignation({ title, department: Number(form.department) }, form.id)
+      saveDesignation({ title }, form.id)
       toast.success(form.id ? 'Designation updated.' : `${title} added.`)
       onClose()
     } catch (err) {
       toast.error((err as Error).message)
+      setErrors({ title: (err as Error).message })
     }
   }
 
@@ -153,7 +144,7 @@ function DesignationDialog({ draft, onClose }: { draft: DesigDraft | null; onClo
         <form onSubmit={submit} noValidate className="grid gap-4">
           <DialogHeader>
             <DialogTitle>{form.id ? 'Edit designation' : 'Add designation'}</DialogTitle>
-            <DialogDescription>Job titles available within a department.</DialogDescription>
+            <DialogDescription>Job titles can be used in any department.</DialogDescription>
           </DialogHeader>
           <Field label="Title" htmlFor="desig-title" required error={errors.title}>
             <Input
@@ -164,23 +155,6 @@ function DesignationDialog({ draft, onClose }: { draft: DesigDraft | null; onClo
               placeholder="e.g. Software Engineer"
               autoFocus
             />
-          </Field>
-          <Field label="Department" htmlFor="desig-dept" required error={errors.department}>
-            <NativeSelect
-              id="desig-dept"
-              value={form.department}
-              onChange={(e) => setForm({ ...form, department: e.target.value })}
-              aria-invalid={!!errors.department}
-            >
-              <option value="" disabled>
-                Select department
-              </option>
-              {data.departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </NativeSelect>
           </Field>
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
@@ -198,7 +172,6 @@ export function DepartmentsPage() {
   const [desigDraft, setDesigDraft] = useState<DesigDraft | null>(null)
   const [toDelete, setToDelete] = useState<DeleteTarget | null>(null)
   const [lastDelete, setLastDelete] = useState<DeleteTarget | null>(null)
-  const [filter, setFilter] = useState('')
   if (toDelete && toDelete !== lastDelete) setLastDelete(toDelete)
   const shownDelete = toDelete ?? lastDelete
 
@@ -206,8 +179,6 @@ export function DepartmentsPage() {
     data.employees.filter((e) => e[key] === id).length
 
   const designations = data.designations
-    .filter((d) => !filter || d.department === Number(filter))
-    .sort((a, b) => a.department - b.department || a.title.localeCompare(b.title))
 
   const confirmDelete = () => {
     if (!toDelete) return
@@ -217,7 +188,6 @@ export function DepartmentsPage() {
       toast.success(
         `${toDelete.kind === 'department' ? toDelete.item.name : toDelete.item.title} deleted.`,
       )
-      if (toDelete.kind === 'department' && filter === String(toDelete.item.id)) setFilter('')
     } catch (err) {
       toast.error((err as Error).message)
     }
@@ -284,32 +254,18 @@ export function DepartmentsPage() {
         <Card className="pb-0">
           <CardHeader>
             <CardTitle>Designations</CardTitle>
-            <CardDescription>{designations.length} shown</CardDescription>
+            <CardDescription>{designations.length} designations</CardDescription>
             <CardAction>
-              <Button
-                size="sm"
-                onClick={() => setDesigDraft({ title: '', department: filter })}
-                disabled={data.departments.length === 0}
-              >
+              <Button size="sm" onClick={() => setDesigDraft({ title: '' })}>
                 <Plus /> Add
               </Button>
             </CardAction>
           </CardHeader>
-          <div className="px-4">
-            <NativeSelect value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Filter by department">
-              <option value="">All departments</option>
-              {data.departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
           {designations.length === 0 ? (
             <EmptyState
               icon={Briefcase}
               title="No designations"
-              description={filter ? 'This department has no designations yet.' : 'Add job titles for your departments.'}
+              description="Add the job titles used in your company."
             />
           ) : (
             <div className="overflow-x-auto border-t">
@@ -317,7 +273,6 @@ export function DepartmentsPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
                     <TableHead className="pl-4">Title</TableHead>
-                    <TableHead>Department</TableHead>
                     <TableHead className="text-right">Employees</TableHead>
                     <TableHead className="w-20 pr-4">
                       <span className="sr-only">Actions</span>
@@ -328,12 +283,11 @@ export function DepartmentsPage() {
                   {designations.map((d) => (
                     <TableRow key={d.id}>
                       <TableCell className="pl-4 font-medium">{d.title}</TableCell>
-                      <TableCell className="text-muted-foreground">{departmentName(data, d.department)}</TableCell>
                       <TableCell className="text-right tabular-nums">{countBy('designation', d.id)}</TableCell>
                       <TableCell className="pr-4">
                         <RowActions
                           label={d.title}
-                          onEdit={() => setDesigDraft({ id: d.id, title: d.title, department: String(d.department) })}
+                          onEdit={() => setDesigDraft({ id: d.id, title: d.title })}
                           onDelete={() => setToDelete({ kind: 'designation', item: d })}
                         />
                       </TableCell>
@@ -358,7 +312,7 @@ export function DepartmentsPage() {
             <DialogTitle>Delete {shownDelete?.kind}?</DialogTitle>
             <DialogDescription>
               {shownDelete?.kind === 'department'
-                ? `“${deleteName}” and its designations will be removed. This can't be undone.`
+                ? `“${deleteName}” will be removed. This can't be undone.`
                 : `“${deleteName}” will be removed. This can't be undone.`}
             </DialogDescription>
           </DialogHeader>

@@ -1,5 +1,5 @@
-// Starting state of the HR data: completely empty. On first run the app asks
-// for an HR/Admin account to be created, then HR sets everything else up.
+// Starting state of the HR data: no accounts or records, only the company's
+// department and designation lists. HR sets everything else up.
 import type {
   AttendanceRecord,
   AttendanceSettings,
@@ -24,11 +24,33 @@ export interface HRData {
   holidays: Holiday[]
 }
 
+/** Company departments, available from the first run (HR can edit them). */
+export const DEFAULT_DEPARTMENTS: Department[] = [
+  { id: 1, name: 'Administration', code: 'ADM' },
+  { id: 2, name: 'Accounts & Finance', code: 'ACF' },
+  { id: 3, name: 'Sales & Marketing', code: 'SAM' },
+  { id: 4, name: 'Graphics Design', code: 'GD' },
+  { id: 5, name: 'IT', code: 'IT' },
+]
+
+/** Company designations, available from the first run (HR can edit them). */
+export const DEFAULT_DESIGNATIONS: Designation[] = [
+  'VP (Engineering)',
+  'Manager',
+  'Asst. Manager',
+  'Executive',
+  'Sr. Executive',
+  'Network & System Administrator',
+  'Junior Software Engineer',
+  'Associate Software Development & Research Engineer',
+  'Senior Business Development Executive',
+].map((title, i) => ({ id: i + 1, title }))
+
 export function createInitialData(): HRData {
   return {
     users: [],
-    departments: [],
-    designations: [],
+    departments: DEFAULT_DEPARTMENTS,
+    designations: DEFAULT_DESIGNATIONS,
     employees: [],
     attendance: [],
     settings: { office_start_time: '09:00', weekly_off_days: [5, 6] },

@@ -1,7 +1,7 @@
 // In-browser HR data store. Frontend only: every action updates local state
 // (kept in localStorage) so the screens are fully clickable without a backend.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { createInitialData, type HRData } from '@/data/seed'
+import { createInitialData, DEFAULT_DEPARTMENTS, DEFAULT_DESIGNATIONS, type HRData } from '@/data/seed'
 import type {
   AttendanceSettings,
   AttendanceStatus,
@@ -21,7 +21,13 @@ const STORAGE_KEY = 'hr-module-data-v3'
 function load(): HRData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw) as HRData
+    if (raw) {
+      const saved = JSON.parse(raw) as HRData
+      // Older saves started with no departments / designations: add the company lists.
+      if (saved.departments.length === 0) saved.departments = DEFAULT_DEPARTMENTS
+      if (saved.designations.length === 0) saved.designations = DEFAULT_DESIGNATIONS
+      return saved
+    }
   } catch {
     // Ignore unreadable storage and start fresh.
   }
@@ -150,13 +156,11 @@ function useHRState() {
       deleteDepartment(id: number) {
         if (data.employees.some((e) => e.department === id))
           throw new HRError('This department has employees and cannot be deleted.')
-        update((d) => ({
-          ...d,
-          departments: d.departments.filter((x) => x.id !== id),
-          designations: d.designations.filter((x) => x.department !== id),
-        }))
+        update((d) => ({ ...d, departments: d.departments.filter((x) => x.id !== id) }))
       },
       saveDesignation(input: Omit<Designation, 'id'>, id?: number) {
+        if (data.designations.some((x) => x.id !== id && x.title.toLowerCase() === input.title.toLowerCase()))
+          throw new HRError('A designation with this title already exists.')
         update((d) => ({
           ...d,
           designations: id
