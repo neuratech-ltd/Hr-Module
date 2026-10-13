@@ -53,7 +53,8 @@ function useHRState() {
       },
 
       // ---- Employees --------------------------------------------------
-      createEmployee(input: EmployeeInput) {
+      /** Creates the profile and its login account with the password HR sets. */
+      createEmployee(input: EmployeeInput, password: string) {
         if (data.employees.some((e) => e.email.toLowerCase() === input.email.toLowerCase()))
           throw new HRError('An employee with this email already exists.')
         const employee = { ...input, id: nextId(data.employees), employee_id: nextEmployeeId(data) }
@@ -66,7 +67,7 @@ function useHRState() {
             {
               id: nextId(d.users),
               email: input.email,
-              password: 'welcome123',
+              password,
               role: 'EMPLOYEE',
               is_active: input.status === 'ACTIVE',
               employee: employee.id,
@@ -86,6 +87,10 @@ function useHRState() {
             u.employee === id ? { ...u, email: input.email, name: input.full_name, is_active: input.status === 'ACTIVE' } : u,
           ),
         }))
+      },
+      /** HR sets a new login password for an employee. */
+      setEmployeePassword(employeeId: number, password: string) {
+        update((d) => ({ ...d, users: d.users.map((u) => (u.employee === employeeId ? { ...u, password } : u)) }))
       },
       setEmployeeStatus(id: number, status: 'ACTIVE' | 'INACTIVE') {
         update((d) => ({
