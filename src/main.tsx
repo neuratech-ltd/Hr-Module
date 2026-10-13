@@ -1,18 +1,24 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
-
-const queryClient = new QueryClient()
+import { HRProvider } from '@/store/hr-store'
+import { AuthProvider } from '@/auth/auth'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </QueryClientProvider>
+    <HRProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <TooltipProvider>
+            <App />
+            <Toaster position="top-right" richColors={false} />
+          </TooltipProvider>
+        </BrowserRouter>
+      </AuthProvider>
+    </HRProvider>
   </StrictMode>,
 )

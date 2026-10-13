@@ -1,32 +1,48 @@
-# React + TypeScript + Vite
+# NeuraTech HR — HR Module (frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Frontend for the HR Module SRS: employee profiles, attendance (Present / Absent) and leave
+(Casual / Annual / Sick), with an HR/Admin panel and an employee self-service portal.
 
-Currently, two official plugins are available:
+**Stack:** React + Vite + TypeScript, React Router, shadcn/ui (base-ui), Tailwind CSS.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+> There is no backend yet. All data lives in an in-browser store (`src/store/hr-store.tsx`)
+> seeded from `src/data/seed.ts` and saved to `localStorage`. Use **Reset sample data** in the
+> user menu to start over.
 
-## React Compiler
+## Run
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Demo accounts
+
+| Role        | Email                     | Password      |
+| ----------- | ------------------------- | ------------- |
+| HR / Admin  | admin@company.com         | admin123      |
+| Employee    | rahim.uddin@company.com   | employee123   |
+
+Any other sample employee (`<name>@company.com`) also signs in with `employee123`.
+
+## Structure
+
+```
+src/
+  types/            domain types (SRS §7)
+  data/seed.ts      sample data
+  store/            in-browser data store + actions
+  auth/             login session
+  lib/hr.ts         business rules (working days, auto-absent, leave days, balances, validation)
+  lib/export.ts     Excel (CSV) / PDF (print) export
+  components/       layout, shared UI, attendance calendar, shadcn/ui
+  pages/auth        login, forgot / reset / change password
+  pages/employee    dashboard + check-in, attendance, leave, apply leave, profile
+  pages/admin       dashboard, employees, departments, attendance, settings,
+                    leave approvals / history / types, holidays, reports
+```
+
+## Connecting the backend later
+
+Pages only talk to `useHR()` and `useAuth()`. When the Django API is ready, re-implement those
+hooks on top of `src/lib/api.ts` (Axios + JWT) and React Query; page components stay the same.
