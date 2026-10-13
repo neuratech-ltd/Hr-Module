@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/auth'
 import { useHR } from '@/store/hr-store'
@@ -88,6 +89,9 @@ export function AdminSetupPage() {
           Create account
         </Button>
       </form>
+      <Link to="/login" className="mt-6 flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="size-3.5" /> Back to sign in
+      </Link>
     </AuthLayout>
   )
 }

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, ShieldCheck, UserPlus, UserRound } from 'lucide-react'
 import { useAuth } from '@/auth/auth'
-import { homeFor } from '@/components/layout/guards'
+import { homeFor, useHasAdmin } from '@/components/layout/guards'
 import { Field } from '@/components/common'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ const ROLE_TEXT: Record<Role, { title: string; description: string }> = {
 
 export function LoginPage() {
   const { login } = useAuth()
+  const hasAdmin = useHasAdmin()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from
@@ -124,8 +125,19 @@ export function LoginPage() {
             <UserPlus /> Create account
           </Button>
         </>
-      ) : (
+      ) : hasAdmin ? (
         <p className="mt-6 text-center text-sm text-muted-foreground">HR/Admin accounts are added by an existing admin.</p>
+      ) : (
+        <>
+          <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            First time here?
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <Button variant="outline" size="lg" className="w-full" render={<Link to="/setup" />}>
+            <ShieldCheck /> Create HR / Admin account
+          </Button>
+        </>
       )}
     </AuthLayout>
   )

@@ -14,14 +14,12 @@ export function RequireAuth({ role }: { role?: Role }) {
   return <Outlet />
 }
 
-const useHasAdmin = () => useHR().data.users.some((u) => u.role === 'ADMIN')
+export const useHasAdmin = () => useHR().data.users.some((u) => u.role === 'ADMIN')
 
-/** Login & password pages: signed-in users go home; before any admin exists, go to setup. */
+/** Login & password pages: signed-in users go straight to their home page. */
 export function GuestOnly() {
   const { user } = useAuth()
-  const hasAdmin = useHasAdmin()
   if (user) return <Navigate to={homeFor(user.role)} replace />
-  if (!hasAdmin) return <Navigate to="/setup" replace />
   return <Outlet />
 }
 
