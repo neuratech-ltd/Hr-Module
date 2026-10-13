@@ -68,33 +68,6 @@ function useHRState() {
         update((d) => ({ ...d, users: [...d.users, user] }))
         return user
       },
-      /** Employee self sign-up: creates a pending account until HR completes the profile. */
-      registerEmployee(input: { name: string; email: string; phone: string; password: string }) {
-        const email = input.email.trim().toLowerCase()
-        if (data.users.some((u) => u.email.toLowerCase() === email))
-          throw new HRError('An account with this email already exists. Try signing in instead.')
-        update((d) => ({
-          ...d,
-          users: [
-            ...d.users,
-            {
-              id: nextId(d.users),
-              email,
-              password: input.password,
-              role: 'EMPLOYEE',
-              is_active: true,
-              employee: null,
-              name: input.name.trim(),
-              phone: input.phone.trim(),
-              created_at: new Date().toISOString(),
-            },
-          ],
-        }))
-      },
-      /** HR declines a sign-up request; the pending account is removed. */
-      rejectSignup(userId: number) {
-        update((d) => ({ ...d, users: d.users.filter((u) => !(u.id === userId && u.role === 'EMPLOYEE' && !u.employee)) }))
-      },
       setUserActive(userId: number, active: boolean) {
         const target = data.users.find((u) => u.id === userId)
         const activeAdmins = data.users.filter((u) => u.role === 'ADMIN' && u.is_active)
@@ -108,44 +81,31 @@ function useHRState() {
       },
 
       // ---- Employees --------------------------------------------------
-      /**
-       * Creates the profile and its login account. If the email belongs to a pending
-       * self sign-up, that account is linked and keeps its own password unless HR sets one.
-       */
-      createEmployee(input: EmployeeInput, password?: string) {
-        if (data.employees.some((e) => e.email.toLowerCase() === input.email.toLowerCase()))
-          throw new HRError('An employee with this email already exists.')
-        const existingUser = data.users.find((u) => u.email.toLowerCase() === input.email.toLowerCase())
-        if (existingUser && (existingUser.role === 'ADMIN' || existingUser.employee))
-          throw new HRError('This email is already used by another account.')
-        if (!existingUser && !password) throw new HRError('Set a password for the login account.')
+      /** Creates the profile and its login account (by HR, or by the employee at sign-up). */
+      createEmployee(input: EmployeeInput, password: string) {
+        if (data.users.some((u) => u.email.toLowerCase() === input.email.toLowerCase()))
+          throw new HRError('An account with this email already exists.')
         const employee = { ...input, id: nextId(data.employees), employee_id: nextEmployeeId(data) }
-        // Creating a profile also creates (or links) the login account.
+        const userId = nextId(data.users)
         update((d) => ({
           ...d,
           employees: [...d.employees, employee],
-          users: existingUser
-            ? d.users.map((u) =>
-                u.id === existingUser.id
-                  ? { ...u, employee: employee.id, name: input.full_name, is_active: input.status === 'ACTIVE', password: password || u.password }
-                  : u,
-              )
-            : [
-                ...d.users,
-                {
-                  id: nextId(d.users),
-                  email: input.email,
-                  password: password!,
-                  role: 'EMPLOYEE',
-                  is_active: input.status === 'ACTIVE',
-                  employee: employee.id,
-                  name: input.full_name,
-                  phone: input.phone,
-                  created_at: new Date().toISOString(),
-                },
-              ],
+          users: [
+            ...d.users,
+            {
+              id: userId,
+              email: input.email,
+              password,
+              role: 'EMPLOYEE',
+              is_active: input.status === 'ACTIVE',
+              employee: employee.id,
+              name: input.full_name,
+              phone: input.phone,
+              created_at: new Date().toISOString(),
+            },
+          ],
         }))
-        return employee
+        return { ...employee, userId }
       },
       updateEmployee(id: number, input: EmployeeInput) {
         if (data.employees.some((e) => e.id !== id && e.email.toLowerCase() === input.email.toLowerCase()))

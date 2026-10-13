@@ -20,9 +20,10 @@ npm run dev
 1. Open the app — it shows **Create HR / Admin account**. Create the first admin.
 2. Follow the **Get started** checklist on the dashboard: departments → designations →
    leave types → holidays → employees.
-3. Employees get a login either when HR creates their profile (HR sets the password), or by
-   **Create an account** on the login page's Employee tab — HR then completes the profile
-   from **Employees → Sign-up requests** before they can sign in.
+3. Employee profiles are created in two ways:
+   - **HR / Admin** adds them under **Employees -> Add employee** and sets the login password (SRS 3).
+   - An employee clicks **Create account** on the login page and fills in their own full profile
+     and password; they are signed in straight away. (Departments must exist first.)
 4. More HR/Admin logins can be added under **HR users**.
 
 The login page has separate **Employee** and **HR / Admin** tabs.

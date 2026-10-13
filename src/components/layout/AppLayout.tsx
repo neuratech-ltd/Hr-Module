@@ -52,13 +52,12 @@ function useNav(): NavGroup[] {
   const { data } = useHR()
   if (user?.role === 'ADMIN') {
     const pending = data.leaveRequests.filter((l) => l.status === 'PENDING').length
-    const signups = data.users.filter((u) => u.role === 'EMPLOYEE' && !u.employee).length
     return [
       { label: 'Overview', items: [{ to: '/admin', label: 'Dashboard', icon: LayoutDashboard }] },
       {
         label: 'People',
         items: [
-          { to: '/admin/employees', label: 'Employees', icon: Users, badge: signups },
+          { to: '/admin/employees', label: 'Employees', icon: Users },
           { to: '/admin/departments', label: 'Departments', icon: Building2 },
           { to: '/admin/users', label: 'HR users', icon: ShieldCheck },
         ],

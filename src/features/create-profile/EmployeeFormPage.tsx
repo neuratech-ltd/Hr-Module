@@ -1,8 +1,8 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { addDays, differenceInYears, parseISO } from 'date-fns'
-import { ArrowLeft, ImagePlus, Trash2, UserX } from 'lucide-react'
+import { ArrowLeft, ImagePlus, Info, Trash2, UserX } from 'lucide-react'
 import { useHR } from '@/store/hr-store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +14,8 @@ import { toISO, todayISO } from '@/lib/dates'
 import type { EmployeeInput, EmploymentType, EmployeeStatus, Gender } from '@/types'
 import { EMPLOYMENT_TYPE_LABEL, GENDER_LABEL } from '@/lib/labels'
 import { MIN_PASSWORD, newPasswordErrors, PasswordInput, StrengthMeter } from '@/features/login/password'
+import { useAuth } from '@/auth/auth'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 interface FormState {
   full_name: string
@@ -61,7 +63,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_RE = /^\+?[0-9][0-9\s-]{6,16}[0-9]$/
 const MAX_PHOTO = 2 * 1024 * 1024
 
-function validate(f: FormState, isEdit: boolean, hasAccount = false): Errors {
+function validate(f: FormState, isEdit: boolean): Errors {
   const e: Errors = {}
   const today = todayISO()
   if (!f.full_name.trim()) e.full_name = 'Full name is required.'
@@ -85,7 +87,7 @@ function validate(f: FormState, isEdit: boolean, hasAccount = false): Errors {
   if (f.ec_phone.trim() && !PHONE_RE.test(f.ec_phone.trim())) e.ec_phone = 'Enter a valid phone number.'
   if (f.ec_phone.trim() && !f.ec_name.trim()) e.ec_name = 'Add a name for this contact.'
   // Password is required when creating; when editing, only if HR wants to reset it.
-  if ((!isEdit && !hasAccount) || f.password || f.confirm_password) {
+  if (!isEdit || f.password || f.confirm_password) {
     const pw = newPasswordErrors(f.password, f.confirm_password)
     if (!f.password) e.password = 'Set a password for the login account.'
     else if (pw.next) e.password = pw.next
@@ -116,17 +118,18 @@ function downscale(file: File, max = 256): Promise<string> {
   })
 }
 
-export function EmployeeFormPage() {
+/**
+ * Employee profile form. HR uses it to add / edit employees; with `selfSignup`
+ * a new employee uses it from the login page to create their own profile and account.
+ */
+export function EmployeeFormPage({ selfSignup = false }: { selfSignup?: boolean }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data, createEmployee, updateEmployee, setEmployeePassword } = useHR()
+  const { signInAs } = useAuth()
   const existing = id ? employeeById(data, Number(id)) : undefined
-  const isEdit = !!id
-  // Completing a self sign-up: the account (and its password) already exists.
-  const [params] = useSearchParams()
-  const request = !isEdit
-    ? data.users.find((u) => u.id === Number(params.get('request')) && u.role === 'EMPLOYEE' && !u.employee)
-    : undefined
+  const isEdit = !!id && !selfSignup
+  const noDepartments = data.departments.length === 0
 
   const [form, setForm] = useState<FormState>(() =>
     existing
@@ -149,9 +152,7 @@ export function EmployeeFormPage() {
           password: '',
           confirm_password: '',
         }
-      : request
-        ? { ...EMPTY, full_name: request.name, email: request.email, phone: request.phone }
-        : EMPTY,
+      : EMPTY,
   )
   const [errors, setErrors] = useState<Errors>({})
   const [submitted, setSubmitted] = useState(false)
@@ -176,7 +177,7 @@ export function EmployeeFormPage() {
   const patch = (changes: Partial<FormState>) => {
     const next = { ...form, ...changes }
     setForm(next)
-    if (submitted) setErrors((x) => ({ ...validate(next, isEdit, !!request), photo: x.photo }))
+    if (submitted) setErrors((x) => ({ ...validate(next, isEdit), photo: x.photo }))
   }
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => patch({ [key]: value })
   const text = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -208,7 +209,7 @@ export function EmployeeFormPage() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
-    const errs = validate(form, isEdit, !!request)
+    const errs = validate(form, isEdit)
     setErrors(errs)
     if (Object.keys(errs).length) {
       toast.error('Please fix the highlighted fields.')
@@ -233,17 +234,22 @@ export function EmployeeFormPage() {
       emergency_contact: { name: form.ec_name.trim(), phone: form.ec_phone.trim() },
     }
     try {
-      if (existing) {
+      if (selfSignup) {
+        const created = createEmployee({ ...input, status: 'ACTIVE' }, form.password)
+        signInAs(created.userId)
+        toast.success(`Welcome, ${created.full_name.split(' ')[0]}!`, {
+          description: `Your profile ${created.employee_id} is ready. Next time, sign in with ${created.email}.`,
+        })
+        navigate('/dashboard', { replace: true })
+      } else if (existing) {
         updateEmployee(existing.id, input)
         if (form.password) setEmployeePassword(existing.id, form.password)
         toast.success(form.password ? 'Profile updated and password reset.' : 'Employee profile updated.')
         navigate(`/admin/employees/${existing.id}`)
       } else {
-        const created = createEmployee(input, form.password || undefined)
+        const created = createEmployee(input, form.password)
         toast.success(`${created.full_name} added as ${created.employee_id}.`, {
-          description: request
-            ? `${created.full_name} can now sign in with the password they chose at sign-up.`
-            : `${created.full_name} can now sign in with ${created.email} and the password you set.`,
+          description: `${created.full_name} can now sign in with ${created.email} and the password you set.`,
           duration: 8000,
         })
         navigate(`/admin/employees/${created.id}`)
@@ -254,17 +260,17 @@ export function EmployeeFormPage() {
     }
   }
 
-  const backTo = existing ? `/admin/employees/${existing.id}` : '/admin/employees'
+  const backTo = selfSignup ? '/login' : existing ? `/admin/employees/${existing.id}` : '/admin/employees'
 
   return (
     <form onSubmit={onSubmit} noValidate>
       <PageHeader
-        title={isEdit ? 'Edit employee' : request ? 'Complete sign-up' : 'Add employee'}
+        title={selfSignup ? 'Create your profile' : isEdit ? 'Edit employee' : 'Add employee'}
         description={
-          isEdit
-            ? `Update the profile of ${existing!.full_name} (${existing!.employee_id}).`
-            : request
-              ? `Approve ${request.name}'s sign-up by completing their profile.`
+          selfSignup
+            ? 'Fill in your details and choose a password. You will be signed in right after.'
+            : isEdit
+              ? `Update the profile of ${existing!.full_name} (${existing!.employee_id}).`
               : 'Create an employee profile and their login account.'
         }
         actions={
@@ -274,6 +280,13 @@ export function EmployeeFormPage() {
         }
       />
 
+      {selfSignup && noDepartments && (
+        <Alert className="mb-4">
+          <Info />
+          <AlertTitle>Sign-up is not open yet</AlertTitle>
+          <AlertDescription>HR has not set up departments and designations yet. Please try again later or contact HR.</AlertDescription>
+        </Alert>
+      )}
       <div className="grid gap-4">
         <Card>
           <CardHeader className="border-b">
@@ -328,7 +341,7 @@ export function EmployeeFormPage() {
                 htmlFor="email"
                 required
                 error={errors.email}
-                hint={isEdit ? undefined : request ? 'From the sign-up request.' : 'Used to sign in.'}
+                hint={isEdit ? undefined : selfSignup ? 'Your work email. You will sign in with it.' : 'Used to sign in.'}
               >
                 <Input
                   id="email"
@@ -337,7 +350,6 @@ export function EmployeeFormPage() {
                   onChange={text('email')}
                   aria-invalid={!!errors.email}
                   placeholder="name@company.com"
-                  readOnly={!!request}
                 />
               </Field>
               <Field label="Phone" htmlFor="phone" required error={errors.phone}>
@@ -450,17 +462,19 @@ export function EmployeeFormPage() {
                 ))}
               </NativeSelect>
             </Field>
-            <Field
-              label="Status"
-              htmlFor="status"
-              required
-              hint={form.status === 'INACTIVE' ? 'Inactive employees cannot sign in.' : undefined}
-            >
-              <NativeSelect id="status" value={form.status} onChange={text('status')}>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </NativeSelect>
-            </Field>
+            {!selfSignup && (
+              <Field
+                label="Status"
+                htmlFor="status"
+                required
+                hint={form.status === 'INACTIVE' ? 'Inactive employees cannot sign in.' : undefined}
+              >
+                <NativeSelect id="status" value={form.status} onChange={text('status')}>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </NativeSelect>
+              </Field>
+            )}
           </CardContent>
         </Card>
 
@@ -468,14 +482,13 @@ export function EmployeeFormPage() {
           <CardHeader className="border-b">
             <CardTitle>Login account</CardTitle>
             <CardDescription>
-              {request
-                ? `${request.name} already chose a password when signing up. Fill in the rest of the profile to approve the account.`
+              {selfSignup
+                ? 'You will sign in with your email and this password.'
                 : isEdit
                   ? 'Leave blank to keep the current password, or enter a new one to reset it.'
                   : 'The employee signs in with their email and this password. Share it with them securely.'}
             </CardDescription>
           </CardHeader>
-          {!request && (
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <Field
                 label={isEdit ? 'New password' : 'Password'}
@@ -503,7 +516,6 @@ export function EmployeeFormPage() {
                 />
               </Field>
             </CardContent>
-          )}
         </Card>
 
         <Card>
@@ -532,7 +544,9 @@ export function EmployeeFormPage() {
         <Button type="button" variant="outline" onClick={() => navigate(backTo)}>
           Cancel
         </Button>
-        <Button type="submit">{isEdit ? 'Save changes' : 'Create employee'}</Button>
+        <Button type="submit" disabled={selfSignup && noDepartments}>
+          {selfSignup ? 'Create account' : isEdit ? 'Save changes' : 'Create employee'}
+        </Button>
       </div>
     </form>
   )

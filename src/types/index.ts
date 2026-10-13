@@ -8,7 +8,7 @@ export interface User {
   password: string
   role: Role
   is_active: boolean
-  /** Linked employee profile. An EMPLOYEE user without one is a pending self sign-up. */
+  /** Linked employee profile (null for HR/Admin accounts). */
   employee: number | null
   name: string
   phone: string

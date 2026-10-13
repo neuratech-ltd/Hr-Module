@@ -58,8 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ? 'This is not an HR/Admin account. Use the Employee tab to sign in.'
             : 'This is an HR/Admin account. Use the HR / Admin tab to sign in.',
         )
-      if (found.role === 'EMPLOYEE' && !found.employee)
-        throw new Error('Your account is waiting for HR to complete your profile. Please check back later.')
       if (!found.is_active) throw new Error('Your account is inactive. Please contact HR.')
       persist(found.id)
       return found

@@ -41,7 +41,6 @@ import { fmtDate } from '@/lib/dates'
 import { exportExcel, exportPdf, type ExportTable } from '@/lib/export'
 import type { Employee } from '@/types'
 import { EMPLOYMENT_TYPE_LABEL } from '@/lib/labels'
-import { SignupRequests } from './SignupRequests'
 
 
 /** Confirm dialog for activating / deactivating an employee. Employees are never deleted. */
@@ -163,8 +162,6 @@ export function EmployeesPage() {
           </>
         }
       />
-
-      <SignupRequests />
 
       <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_12rem_9rem]">
         <div className="relative">

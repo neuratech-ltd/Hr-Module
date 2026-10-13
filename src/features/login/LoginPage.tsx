@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, ShieldCheck, UserRound } from 'lucide-react'
+import { AlertCircle, ShieldCheck, UserPlus, UserRound } from 'lucide-react'
 import { useAuth } from '@/auth/auth'
 import { homeFor } from '@/components/layout/guards'
 import { Field } from '@/components/common'
@@ -113,18 +113,20 @@ export function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        {role === 'EMPLOYEE' ? (
-          <>
-            New here?{' '}
-            <Link to="/signup" className="font-medium text-primary hover:underline">
-              Create an account
-            </Link>
-          </>
-        ) : (
-          'HR/Admin accounts are added by an existing admin.'
-        )}
-      </p>
+      {role === 'EMPLOYEE' ? (
+        <>
+          <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            Don't have a profile yet?
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <Button variant="outline" size="lg" className="w-full" render={<Link to="/signup" />}>
+            <UserPlus /> Create account
+          </Button>
+        </>
+      ) : (
+        <p className="mt-6 text-center text-sm text-muted-foreground">HR/Admin accounts are added by an existing admin.</p>
+      )}
     </AuthLayout>
   )
 }
