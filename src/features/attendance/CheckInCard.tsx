@@ -8,8 +8,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { approvedLeaveOn, dayStatus, holidayOn, leaveTypeName, recordOn } from '@/lib/hr'
 import { fmtTime, todayISO } from '@/lib/dates'
 import type { Employee } from '@/types'
-import { fmtClock, isLate, workedDuration } from './utils'
-import { useNow } from './useNow'
+import { fmtClock, isLate, workedDuration } from '@/lib/format'
+import { useNow } from '@/hooks/useNow'
 
 /** One-click Check In / Check Out for today (SRS 4.2). */
 export function CheckInCard({ employee }: { employee: Employee }) {

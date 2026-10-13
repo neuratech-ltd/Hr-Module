@@ -14,16 +14,16 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/auth/auth'
 import { useHR } from '@/store/hr-store'
-import { useMonthAttendance } from '@/components/AttendanceCalendar'
+import { useMonthAttendance } from '@/features/attendance/AttendanceCalendar'
 import { EmptyState, LeaveStatusBadge, PageHeader, StatCard, ToneBadge } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { leaveBalances, leaveTypeName } from '@/lib/hr'
 import { todayISO } from '@/lib/dates'
 import type { Employee } from '@/types'
-import { fmtDays, fmtRange } from './utils'
-import { useNow } from './useNow'
-import { CheckInCard } from './CheckInCard'
+import { fmtDays, fmtRange } from '@/lib/format'
+import { useNow } from '@/hooks/useNow'
+import { CheckInCard } from '@/features/attendance/CheckInCard'
 
 function greeting(d: Date) {
   const h = d.getHours()

@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/auth'
+import { useHR } from '@/store/hr-store'
 import type { Role } from '@/types'
 
 export const homeFor = (role: Role) => (role === 'ADMIN' ? '/admin' : '/dashboard')
@@ -13,10 +14,21 @@ export function RequireAuth({ role }: { role?: Role }) {
   return <Outlet />
 }
 
-/** Login & password pages: signed-in users go straight to their home page. */
+const useHasAdmin = () => useHR().data.users.some((u) => u.role === 'ADMIN')
+
+/** Login & password pages: signed-in users go home; before any admin exists, go to setup. */
 export function GuestOnly() {
   const { user } = useAuth()
+  const hasAdmin = useHasAdmin()
   if (user) return <Navigate to={homeFor(user.role)} replace />
+  if (!hasAdmin) return <Navigate to="/setup" replace />
+  return <Outlet />
+}
+
+/** First-run page, only reachable while no HR/Admin account exists. */
+export function SetupOnly() {
+  const hasAdmin = useHasAdmin()
+  if (hasAdmin) return <Navigate to="/login" replace />
   return <Outlet />
 }
 

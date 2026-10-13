@@ -8,8 +8,11 @@ export interface User {
   password: string
   role: Role
   is_active: boolean
+  /** Linked employee profile. An EMPLOYEE user without one is a pending self sign-up. */
   employee: number | null
   name: string
+  phone: string
+  created_at: string
 }
 
 export interface Department {

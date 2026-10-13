@@ -2,14 +2,17 @@
 // Swap login/logout for the JWT API calls once the backend exists.
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { useHR } from '@/store/hr-store'
-import type { Employee, User } from '@/types'
+import type { Employee, Role, User } from '@/types'
 
 const SESSION_KEY = 'hr-module-session'
 
 interface AuthContextValue {
   user: User | null
   employee: Employee | null
-  login: (email: string, password: string) => User
+  /** Signs in; when `role` is given the account must have that role. */
+  login: (email: string, password: string, role?: Role) => User
+  /** Starts a session for an account that was just created (first-run admin). */
+  signInAs: (userId: number) => void
   logout: () => void
   changePassword: (current: string, next: string) => void
   resetPassword: (email: string, next: string) => void
@@ -46,13 +49,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     user,
     employee,
-    login(email, password) {
+    login(email, password, role) {
       const found = data.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase())
       if (!found || found.password !== password) throw new Error('Invalid email or password.')
+      if (role && found.role !== role)
+        throw new Error(
+          role === 'ADMIN'
+            ? 'This is not an HR/Admin account. Use the Employee tab to sign in.'
+            : 'This is an HR/Admin account. Use the HR / Admin tab to sign in.',
+        )
+      if (found.role === 'EMPLOYEE' && !found.employee)
+        throw new Error('Your account is waiting for HR to complete your profile. Please check back later.')
       if (!found.is_active) throw new Error('Your account is inactive. Please contact HR.')
       persist(found.id)
       return found
     },
+    signInAs: (userId) => persist(userId),
     logout: () => persist(null),
     changePassword(current, next) {
       if (!user) throw new Error('Not signed in.')

@@ -20,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { leaveTypeName } from '@/lib/hr'
 import type { Employee, LeaveStatus } from '@/types'
-import { fmtDays, fmtRange } from './utils'
+import { fmtDays, fmtRange } from '@/lib/format'
 import { LeaveBalanceCards } from './LeaveBalanceCards'
 
 type Filter = 'ALL' | LeaveStatus

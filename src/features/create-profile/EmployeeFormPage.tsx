@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { addDays, differenceInYears, parseISO } from 'date-fns'
 import { ArrowLeft, ImagePlus, Trash2, UserX } from 'lucide-react'
@@ -13,7 +13,7 @@ import { employeeById, nextEmployeeId } from '@/lib/hr'
 import { toISO, todayISO } from '@/lib/dates'
 import type { EmployeeInput, EmploymentType, EmployeeStatus, Gender } from '@/types'
 import { EMPLOYMENT_TYPE_LABEL, GENDER_LABEL } from '@/lib/labels'
-import { MIN_PASSWORD, newPasswordErrors, PasswordInput, StrengthMeter } from '@/pages/auth/password'
+import { MIN_PASSWORD, newPasswordErrors, PasswordInput, StrengthMeter } from '@/features/login/password'
 
 interface FormState {
   full_name: string
@@ -61,7 +61,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_RE = /^\+?[0-9][0-9\s-]{6,16}[0-9]$/
 const MAX_PHOTO = 2 * 1024 * 1024
 
-function validate(f: FormState, isEdit: boolean): Errors {
+function validate(f: FormState, isEdit: boolean, hasAccount = false): Errors {
   const e: Errors = {}
   const today = todayISO()
   if (!f.full_name.trim()) e.full_name = 'Full name is required.'
@@ -73,21 +73,19 @@ function validate(f: FormState, isEdit: boolean): Errors {
   if (!f.gender) e.gender = 'Select a gender.'
   if (!f.date_of_birth) e.date_of_birth = 'Date of birth is required.'
   else if (f.date_of_birth >= today) e.date_of_birth = 'Date of birth must be in the past.'
-  else if (differenceInYears(parseISO(today), parseISO(f.date_of_birth)) < 16)
-    e.date_of_birth = 'Employee must be at least 16 years old.'
+  else if (differenceInYears(parseISO(today), parseISO(f.date_of_birth)) < 16) e.date_of_birth = 'Employee must be at least 16 years old.'
   if (f.nid.trim() && !/^\d{10,17}$/.test(f.nid.trim())) e.nid = 'NID should be 10 to 17 digits.'
   if (!f.department) e.department = 'Select a department.'
   if (!f.designation) e.designation = 'Select a designation.'
   if (!f.joining_date) e.joining_date = 'Joining date is required.'
-  else if (f.joining_date > toISO(addDays(parseISO(today), 30)))
-    e.joining_date = 'Joining date cannot be more than 30 days in the future.'
+  else if (f.joining_date > toISO(addDays(parseISO(today), 30))) e.joining_date = 'Joining date cannot be more than 30 days in the future.'
   else if (f.date_of_birth && f.joining_date <= f.date_of_birth) e.joining_date = 'Joining date must be after date of birth.'
   if (!f.employment_type) e.employment_type = 'Select an employment type.'
   if (!f.address.trim()) e.address = 'Present address is required.'
   if (f.ec_phone.trim() && !PHONE_RE.test(f.ec_phone.trim())) e.ec_phone = 'Enter a valid phone number.'
   if (f.ec_phone.trim() && !f.ec_name.trim()) e.ec_name = 'Add a name for this contact.'
   // Password is required when creating; when editing, only if HR wants to reset it.
-  if (!isEdit || f.password || f.confirm_password) {
+  if ((!isEdit && !hasAccount) || f.password || f.confirm_password) {
     const pw = newPasswordErrors(f.password, f.confirm_password)
     if (!f.password) e.password = 'Set a password for the login account.'
     else if (pw.next) e.password = pw.next
@@ -124,6 +122,11 @@ export function EmployeeFormPage() {
   const { data, createEmployee, updateEmployee, setEmployeePassword } = useHR()
   const existing = id ? employeeById(data, Number(id)) : undefined
   const isEdit = !!id
+  // Completing a self sign-up: the account (and its password) already exists.
+  const [params] = useSearchParams()
+  const request = !isEdit
+    ? data.users.find((u) => u.id === Number(params.get('request')) && u.role === 'EMPLOYEE' && !u.employee)
+    : undefined
 
   const [form, setForm] = useState<FormState>(() =>
     existing
@@ -146,7 +149,9 @@ export function EmployeeFormPage() {
           password: '',
           confirm_password: '',
         }
-      : EMPTY,
+      : request
+        ? { ...EMPTY, full_name: request.name, email: request.email, phone: request.phone }
+        : EMPTY,
   )
   const [errors, setErrors] = useState<Errors>({})
   const [submitted, setSubmitted] = useState(false)
@@ -171,7 +176,7 @@ export function EmployeeFormPage() {
   const patch = (changes: Partial<FormState>) => {
     const next = { ...form, ...changes }
     setForm(next)
-    if (submitted) setErrors((x) => ({ ...validate(next, isEdit), photo: x.photo }))
+    if (submitted) setErrors((x) => ({ ...validate(next, isEdit, !!request), photo: x.photo }))
   }
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => patch({ [key]: value })
   const text = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -203,7 +208,7 @@ export function EmployeeFormPage() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
-    const errs = validate(form, isEdit)
+    const errs = validate(form, isEdit, !!request)
     setErrors(errs)
     if (Object.keys(errs).length) {
       toast.error('Please fix the highlighted fields.')
@@ -234,9 +239,11 @@ export function EmployeeFormPage() {
         toast.success(form.password ? 'Profile updated and password reset.' : 'Employee profile updated.')
         navigate(`/admin/employees/${existing.id}`)
       } else {
-        const created = createEmployee(input, form.password)
+        const created = createEmployee(input, form.password || undefined)
         toast.success(`${created.full_name} added as ${created.employee_id}.`, {
-          description: `${created.full_name} can now sign in with ${created.email} and the password you set.`,
+          description: request
+            ? `${created.full_name} can now sign in with the password they chose at sign-up.`
+            : `${created.full_name} can now sign in with ${created.email} and the password you set.`,
           duration: 8000,
         })
         navigate(`/admin/employees/${created.id}`)
@@ -252,11 +259,13 @@ export function EmployeeFormPage() {
   return (
     <form onSubmit={onSubmit} noValidate>
       <PageHeader
-        title={isEdit ? 'Edit employee' : 'Add employee'}
+        title={isEdit ? 'Edit employee' : request ? 'Complete sign-up' : 'Add employee'}
         description={
           isEdit
             ? `Update the profile of ${existing!.full_name} (${existing!.employee_id}).`
-            : 'Create an employee profile. A login account is created automatically.'
+            : request
+              ? `Approve ${request.name}'s sign-up by completing their profile.`
+              : 'Create an employee profile and their login account.'
         }
         actions={
           <Button variant="ghost" render={<Link to={backTo} />}>
@@ -283,32 +292,15 @@ export function EmployeeFormPage() {
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-[10rem_1fr]">
             <div className="flex flex-row items-center gap-4 md:flex-col md:items-start">
-              <PersonAvatar
-                name={form.full_name || '?'}
-                photo={form.photo}
-                className="size-20 text-lg md:size-28 md:text-2xl"
-              />
+              <PersonAvatar name={form.full_name || '?'} photo={form.photo} className="size-20 text-lg md:size-28 md:text-2xl" />
               <div className="grid gap-1.5">
-                <input
-                  ref={fileRef}
-                  id="photo"
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  className="sr-only"
-                  onChange={onPhoto}
-                />
+                <input ref={fileRef} id="photo" type="file" accept="image/jpeg,image/png" className="sr-only" onChange={onPhoto} />
                 <div className="flex gap-1.5">
                   <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
                     <ImagePlus /> {form.photo ? 'Change' : 'Upload photo'}
                   </Button>
                   {form.photo && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Remove photo"
-                      onClick={() => set('photo', null)}
-                    >
+                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Remove photo" onClick={() => set('photo', null)}>
                       <Trash2 />
                     </Button>
                   )}
@@ -323,13 +315,40 @@ export function EmployeeFormPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Full name" htmlFor="full_name" required error={errors.full_name} className="sm:col-span-2">
-                <Input id="full_name" value={form.full_name} onChange={text('full_name')} aria-invalid={!!errors.full_name} autoComplete="off" />
+                <Input
+                  id="full_name"
+                  value={form.full_name}
+                  onChange={text('full_name')}
+                  aria-invalid={!!errors.full_name}
+                  autoComplete="off"
+                />
               </Field>
-              <Field label="Email" htmlFor="email" required error={errors.email} hint={isEdit ? undefined : 'Used to sign in.'}>
-                <Input id="email" type="email" value={form.email} onChange={text('email')} aria-invalid={!!errors.email} placeholder="name@company.com" />
+              <Field
+                label="Email"
+                htmlFor="email"
+                required
+                error={errors.email}
+                hint={isEdit ? undefined : request ? 'From the sign-up request.' : 'Used to sign in.'}
+              >
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={text('email')}
+                  aria-invalid={!!errors.email}
+                  placeholder="name@company.com"
+                  readOnly={!!request}
+                />
               </Field>
               <Field label="Phone" htmlFor="phone" required error={errors.phone}>
-                <Input id="phone" type="tel" value={form.phone} onChange={text('phone')} aria-invalid={!!errors.phone} placeholder="+8801711000000" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={form.phone}
+                  onChange={text('phone')}
+                  aria-invalid={!!errors.phone}
+                  placeholder="+8801711000000"
+                />
               </Field>
               <Field label="Gender" htmlFor="gender" required error={errors.gender}>
                 <NativeSelect id="gender" value={form.gender} onChange={text('gender')} aria-invalid={!!errors.gender}>
@@ -449,38 +468,42 @@ export function EmployeeFormPage() {
           <CardHeader className="border-b">
             <CardTitle>Login account</CardTitle>
             <CardDescription>
-              {isEdit
-                ? 'Leave blank to keep the current password, or enter a new one to reset it.'
-                : 'The employee signs in with their email and this password. Share it with them securely.'}
+              {request
+                ? `${request.name} already chose a password when signing up. Fill in the rest of the profile to approve the account.`
+                : isEdit
+                  ? 'Leave blank to keep the current password, or enter a new one to reset it.'
+                  : 'The employee signs in with their email and this password. Share it with them securely.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label={isEdit ? 'New password' : 'Password'}
-              htmlFor="password"
-              required={!isEdit}
-              error={errors.password}
-              hint={`At least ${MIN_PASSWORD} characters.`}
-            >
-              <PasswordInput
-                id="password"
-                autoComplete="new-password"
-                value={form.password}
-                onChange={text('password')}
-                aria-invalid={!!errors.password}
-              />
-              <StrengthMeter password={form.password} />
-            </Field>
-            <Field label="Confirm password" htmlFor="confirm_password" required={!isEdit} error={errors.confirm_password}>
-              <PasswordInput
-                id="confirm_password"
-                autoComplete="new-password"
-                value={form.confirm_password}
-                onChange={text('confirm_password')}
-                aria-invalid={!!errors.confirm_password}
-              />
-            </Field>
-          </CardContent>
+          {!request && (
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label={isEdit ? 'New password' : 'Password'}
+                htmlFor="password"
+                required={!isEdit}
+                error={errors.password}
+                hint={`At least ${MIN_PASSWORD} characters.`}
+              >
+                <PasswordInput
+                  id="password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={text('password')}
+                  aria-invalid={!!errors.password}
+                />
+                <StrengthMeter password={form.password} />
+              </Field>
+              <Field label="Confirm password" htmlFor="confirm_password" required={!isEdit} error={errors.confirm_password}>
+                <PasswordInput
+                  id="confirm_password"
+                  autoComplete="new-password"
+                  value={form.confirm_password}
+                  onChange={text('confirm_password')}
+                  aria-invalid={!!errors.confirm_password}
+                />
+              </Field>
+            </CardContent>
+          )}
         </Card>
 
         <Card>

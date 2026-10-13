@@ -27,7 +27,7 @@ import {
   PersonAvatar,
   StatCard,
 } from '@/components/common'
-import { AttendanceCalendar, useMonthAttendance } from '@/components/AttendanceCalendar'
+import { AttendanceCalendar, useMonthAttendance } from '@/features/attendance/AttendanceCalendar'
 import { departmentName, designationTitle, leaveBalances, leaveTypeName } from '@/lib/hr'
 import { fmtDate } from '@/lib/dates'
 import type { Employee } from '@/types'

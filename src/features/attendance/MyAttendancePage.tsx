@@ -3,13 +3,13 @@ import { endOfMonth, format, parseISO, startOfMonth } from 'date-fns'
 import { Briefcase, CalendarX2, CircleCheck, CircleX, Palmtree } from 'lucide-react'
 import { useAuth } from '@/auth/auth'
 import { useHR } from '@/store/hr-store'
-import { AttendanceCalendar, useMonthAttendance } from '@/components/AttendanceCalendar'
+import { AttendanceCalendar, useMonthAttendance } from './AttendanceCalendar'
 import { DayStatusBadge, EmptyState, PageHeader, StatCard, ToneBadge } from '@/components/common'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { fmtTime, toISO } from '@/lib/dates'
 import type { Employee } from '@/types'
-import { isLate, workedDuration } from './utils'
+import { isLate, workedDuration } from '@/lib/format'
 
 export function MyAttendancePage() {
   const { employee } = useAuth()

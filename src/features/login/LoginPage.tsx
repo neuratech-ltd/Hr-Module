@@ -1,14 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, ShieldCheck, UserRound } from 'lucide-react'
 import { useAuth } from '@/auth/auth'
 import { homeFor } from '@/components/layout/guards'
 import { Field } from '@/components/common'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { Role } from '@/types'
 import { AuthLayout } from './AuthLayout'
 import { PasswordInput } from './password'
+
+const ROLE_TEXT: Record<Role, { title: string; description: string }> = {
+  ADMIN: { title: 'HR / Admin sign in', description: 'Manage employees, attendance and leave.' },
+  EMPLOYEE: { title: 'Employee sign in', description: 'Check in, apply for leave and view your profile.' },
+}
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -16,6 +23,7 @@ export function LoginPage() {
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from
 
+  const [role, setRole] = useState<Role>('EMPLOYEE')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -29,15 +37,36 @@ export function LoginPage() {
     setTouched(true)
     if (emailError || passwordError) return
     try {
-      const user = login(email, password)
-      navigate(from && from !== '/login' ? from : homeFor(user.role), { replace: true })
+      const user = login(email, password, role)
+      // Only return to the page they came from if it belongs to their role.
+      const back = from && from !== '/login' && (from.startsWith('/admin') === (user.role === 'ADMIN')) ? from : null
+      navigate(back ?? homeFor(user.role), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed.')
     }
   }
 
   return (
-    <AuthLayout title="Welcome back" description="Sign in to NeuraTech HR.">
+    <AuthLayout title={ROLE_TEXT[role].title} description={ROLE_TEXT[role].description}>
+      <Tabs
+        value={role}
+        onValueChange={(v) => {
+          setRole(v as Role)
+          setError('')
+          setTouched(false)
+        }}
+        className="mb-6"
+      >
+        <TabsList className="h-9! w-full">
+          <TabsTrigger value="EMPLOYEE">
+            <UserRound /> Employee
+          </TabsTrigger>
+          <TabsTrigger value="ADMIN">
+            <ShieldCheck /> HR / Admin
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <form onSubmit={submit} noValidate className="grid gap-4">
         {error && (
           <Alert variant="destructive">
@@ -80,10 +109,22 @@ export function LoginPage() {
           </Link>
         </div>
         <Button type="submit" size="lg" className="mt-1 w-full">
-          Sign in
+          Sign in as {role === 'ADMIN' ? 'HR / Admin' : 'employee'}
         </Button>
       </form>
 
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        {role === 'EMPLOYEE' ? (
+          <>
+            New here?{' '}
+            <Link to="/signup" className="font-medium text-primary hover:underline">
+              Create an account
+            </Link>
+          </>
+        ) : (
+          'HR/Admin accounts are added by an existing admin.'
+        )}
+      </p>
     </AuthLayout>
   )
 }

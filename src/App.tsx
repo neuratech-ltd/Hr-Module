@@ -1,106 +1,109 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { GuestOnly, HomeRedirect, RequireAuth } from '@/components/layout/guards'
+import { GuestOnly, HomeRedirect, RequireAuth, SetupOnly } from '@/components/layout/guards'
 
 // Each page loads on demand to keep the first load small.
-const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
+const AdminSetupPage = lazy(() => import('@/features/login/AdminSetupPage').then((m) => ({ default: m.AdminSetupPage })))
+const SignupPage = lazy(() => import('@/features/login/SignupPage').then((m) => ({ default: m.SignupPage })))
+const HrUsersPage = lazy(() => import('@/features/hr-users/HrUsersPage').then((m) => ({ default: m.HrUsersPage })))
+const LoginPage = lazy(() => import('@/features/login/LoginPage').then((m) => ({ default: m.LoginPage })))
 const ForgotPasswordPage = lazy(() =>
-  import('@/pages/auth/ForgotPasswordPage').then((m) => ({
+  import('@/features/login/ForgotPasswordPage').then((m) => ({
     default: m.ForgotPasswordPage,
   })),
 )
 const ResetPasswordPage = lazy(() =>
-  import('@/pages/auth/ResetPasswordPage').then((m) => ({
+  import('@/features/login/ResetPasswordPage').then((m) => ({
     default: m.ResetPasswordPage,
   })),
 )
 const ChangePasswordPage = lazy(() =>
-  import('@/pages/auth/ChangePasswordPage').then((m) => ({
+  import('@/features/login/ChangePasswordPage').then((m) => ({
     default: m.ChangePasswordPage,
   })),
 )
 const EmployeeDashboard = lazy(() =>
-  import('@/pages/employee/EmployeeDashboard').then((m) => ({
+  import('@/features/dashboard/EmployeeDashboard').then((m) => ({
     default: m.EmployeeDashboard,
   })),
 )
 const MyAttendancePage = lazy(() =>
-  import('@/pages/employee/MyAttendancePage').then((m) => ({
+  import('@/features/attendance/MyAttendancePage').then((m) => ({
     default: m.MyAttendancePage,
   })),
 )
 const MyLeavePage = lazy(() =>
-  import('@/pages/employee/MyLeavePage').then((m) => ({
+  import('@/features/leave/MyLeavePage').then((m) => ({
     default: m.MyLeavePage,
   })),
 )
 const ApplyLeavePage = lazy(() =>
-  import('@/pages/employee/ApplyLeavePage').then((m) => ({
+  import('@/features/leave/ApplyLeavePage').then((m) => ({
     default: m.ApplyLeavePage,
   })),
 )
 const MyProfilePage = lazy(() =>
-  import('@/pages/employee/MyProfilePage').then((m) => ({
+  import('@/features/my-profile/MyProfilePage').then((m) => ({
     default: m.MyProfilePage,
   })),
 )
 const AdminDashboard = lazy(() =>
-  import('@/pages/admin/AdminDashboard').then((m) => ({
+  import('@/features/dashboard/AdminDashboard').then((m) => ({
     default: m.AdminDashboard,
   })),
 )
 const EmployeesPage = lazy(() =>
-  import('@/pages/admin/EmployeesPage').then((m) => ({
+  import('@/features/employees/EmployeesPage').then((m) => ({
     default: m.EmployeesPage,
   })),
 )
 const EmployeeFormPage = lazy(() =>
-  import('@/pages/admin/EmployeeFormPage').then((m) => ({
+  import('@/features/create-profile/EmployeeFormPage').then((m) => ({
     default: m.EmployeeFormPage,
   })),
 )
 const EmployeeDetailPage = lazy(() =>
-  import('@/pages/admin/EmployeeDetailPage').then((m) => ({
+  import('@/features/employees/EmployeeDetailPage').then((m) => ({
     default: m.EmployeeDetailPage,
   })),
 )
 const DepartmentsPage = lazy(() =>
-  import('@/pages/admin/DepartmentsPage').then((m) => ({
+  import('@/features/departments/DepartmentsPage').then((m) => ({
     default: m.DepartmentsPage,
   })),
 )
 const AttendancePage = lazy(() =>
-  import('@/pages/admin/AttendancePage').then((m) => ({
+  import('@/features/attendance/AttendancePage').then((m) => ({
     default: m.AttendancePage,
   })),
 )
 const AttendanceSettingsPage = lazy(() =>
-  import('@/pages/admin/AttendanceSettingsPage').then((m) => ({
+  import('@/features/attendance/AttendanceSettingsPage').then((m) => ({
     default: m.AttendanceSettingsPage,
   })),
 )
 const LeaveApprovalsPage = lazy(() =>
-  import('@/pages/admin/LeaveApprovalsPage').then((m) => ({
+  import('@/features/leave/LeaveApprovalsPage').then((m) => ({
     default: m.LeaveApprovalsPage,
   })),
 )
 const LeaveHistoryPage = lazy(() =>
-  import('@/pages/admin/LeaveHistoryPage').then((m) => ({
+  import('@/features/leave/LeaveHistoryPage').then((m) => ({
     default: m.LeaveHistoryPage,
   })),
 )
 const LeaveTypesPage = lazy(() =>
-  import('@/pages/admin/LeaveTypesPage').then((m) => ({
+  import('@/features/leave/LeaveTypesPage').then((m) => ({
     default: m.LeaveTypesPage,
   })),
 )
 const HolidaysPage = lazy(() =>
-  import('@/pages/admin/HolidaysPage').then((m) => ({
+  import('@/features/holidays/HolidaysPage').then((m) => ({
     default: m.HolidaysPage,
   })),
 )
-const ReportsPage = lazy(() => import('@/pages/admin/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 
 function PageFallback() {
   return <div className="grid min-h-40 place-items-center text-sm text-muted-foreground">Loading…</div>
@@ -110,8 +113,12 @@ function App() {
   return (
     <Suspense fallback={<PageFallback />}>
       <Routes>
+        <Route element={<SetupOnly />}>
+          <Route path="/setup" element={<AdminSetupPage />} />
+        </Route>
         <Route element={<GuestOnly />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
@@ -135,6 +142,7 @@ function App() {
               <Route path="employees/:id" element={<EmployeeDetailPage />} />
               <Route path="employees/:id/edit" element={<EmployeeFormPage />} />
               <Route path="departments" element={<DepartmentsPage />} />
+              <Route path="users" element={<HrUsersPage />} />
               <Route path="attendance" element={<AttendancePage />} />
               <Route path="attendance/settings" element={<AttendanceSettingsPage />} />
               <Route path="leave/approvals" element={<LeaveApprovalsPage />} />

@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { countLeaveDays, leaveBalances, validateLeave } from '@/lib/hr'
 import { toISO, todayISO } from '@/lib/dates'
 import type { Employee, LeaveType } from '@/types'
-import { fmtDays } from './utils'
+import { fmtDays } from '@/lib/format'
 
 function ruleHint(t: LeaveType): string {
   switch (t.rule) {

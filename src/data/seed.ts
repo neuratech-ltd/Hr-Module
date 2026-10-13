@@ -1,5 +1,5 @@
-// Starting state of the HR data: empty except for the HR/Admin login,
-// so HR can sign in and set up departments, leave types, holidays and employees.
+// Starting state of the HR data: completely empty. On first run the app asks
+// for an HR/Admin account to be created, then HR sets everything else up.
 import type {
   AttendanceRecord,
   AttendanceSettings,
@@ -24,22 +24,9 @@ export interface HRData {
   holidays: Holiday[]
 }
 
-/** Default HR/Admin account. Change the password after first sign-in. */
-export const DEFAULT_ADMIN = { email: 'admin@company.com', password: 'admin123' }
-
 export function createInitialData(): HRData {
   return {
-    users: [
-      {
-        id: 1,
-        email: DEFAULT_ADMIN.email,
-        password: DEFAULT_ADMIN.password,
-        role: 'ADMIN',
-        is_active: true,
-        employee: null,
-        name: 'HR Admin',
-      },
-    ],
+    users: [],
     departments: [],
     designations: [],
     employees: [],
