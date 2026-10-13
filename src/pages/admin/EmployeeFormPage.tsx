@@ -13,6 +13,7 @@ import { employeeById, nextEmployeeId } from '@/lib/hr'
 import { toISO, todayISO } from '@/lib/dates'
 import type { EmployeeInput, EmploymentType, EmployeeStatus, Gender } from '@/types'
 import { EMPLOYMENT_TYPE_LABEL, GENDER_LABEL } from '@/lib/labels'
+import { MIN_PASSWORD, newPasswordErrors, PasswordInput, StrengthMeter } from '@/pages/auth/password'
 
 interface FormState {
   full_name: string
@@ -30,6 +31,8 @@ interface FormState {
   address: string
   ec_name: string
   ec_phone: string
+  password: string
+  confirm_password: string
 }
 
 type Errors = Partial<Record<keyof FormState, string>>
@@ -50,13 +53,15 @@ const EMPTY: FormState = {
   address: '',
   ec_name: '',
   ec_phone: '',
+  password: '',
+  confirm_password: '',
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_RE = /^\+?[0-9][0-9\s-]{6,16}[0-9]$/
 const MAX_PHOTO = 2 * 1024 * 1024
 
-function validate(f: FormState): Errors {
+function validate(f: FormState, isEdit: boolean): Errors {
   const e: Errors = {}
   const today = todayISO()
   if (!f.full_name.trim()) e.full_name = 'Full name is required.'
@@ -81,6 +86,13 @@ function validate(f: FormState): Errors {
   if (!f.address.trim()) e.address = 'Present address is required.'
   if (f.ec_phone.trim() && !PHONE_RE.test(f.ec_phone.trim())) e.ec_phone = 'Enter a valid phone number.'
   if (f.ec_phone.trim() && !f.ec_name.trim()) e.ec_name = 'Add a name for this contact.'
+  // Password is required when creating; when editing, only if HR wants to reset it.
+  if (!isEdit || f.password || f.confirm_password) {
+    const pw = newPasswordErrors(f.password, f.confirm_password)
+    if (!f.password) e.password = 'Set a password for the login account.'
+    else if (pw.next) e.password = pw.next
+    if (!e.password && pw.confirm) e.confirm_password = pw.confirm
+  }
   return e
 }
 
@@ -109,7 +121,7 @@ function downscale(file: File, max = 256): Promise<string> {
 export function EmployeeFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { data, createEmployee, updateEmployee } = useHR()
+  const { data, createEmployee, updateEmployee, setEmployeePassword } = useHR()
   const existing = id ? employeeById(data, Number(id)) : undefined
   const isEdit = !!id
 
@@ -131,6 +143,8 @@ export function EmployeeFormPage() {
           address: existing.address,
           ec_name: existing.emergency_contact.name,
           ec_phone: existing.emergency_contact.phone,
+          password: '',
+          confirm_password: '',
         }
       : EMPTY,
   )
@@ -157,7 +171,7 @@ export function EmployeeFormPage() {
   const patch = (changes: Partial<FormState>) => {
     const next = { ...form, ...changes }
     setForm(next)
-    if (submitted) setErrors((x) => ({ ...validate(next), photo: x.photo }))
+    if (submitted) setErrors((x) => ({ ...validate(next, isEdit), photo: x.photo }))
   }
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => patch({ [key]: value })
   const text = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -189,7 +203,7 @@ export function EmployeeFormPage() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
-    const errs = validate(form)
+    const errs = validate(form, isEdit)
     setErrors(errs)
     if (Object.keys(errs).length) {
       toast.error('Please fix the highlighted fields.')
@@ -216,12 +230,13 @@ export function EmployeeFormPage() {
     try {
       if (existing) {
         updateEmployee(existing.id, input)
-        toast.success('Employee profile updated.')
+        if (form.password) setEmployeePassword(existing.id, form.password)
+        toast.success(form.password ? 'Profile updated and password reset.' : 'Employee profile updated.')
         navigate(`/admin/employees/${existing.id}`)
       } else {
-        const created = createEmployee(input)
+        const created = createEmployee(input, form.password)
         toast.success(`${created.full_name} added as ${created.employee_id}.`, {
-          description: `A login account was created for ${created.email} with the default password "welcome123".`,
+          description: `${created.full_name} can now sign in with ${created.email} and the password you set.`,
           duration: 8000,
         })
         navigate(`/admin/employees/${created.id}`)
@@ -426,6 +441,44 @@ export function EmployeeFormPage() {
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
               </NativeSelect>
+            </Field>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>Login account</CardTitle>
+            <CardDescription>
+              {isEdit
+                ? 'Leave blank to keep the current password, or enter a new one to reset it.'
+                : 'The employee signs in with their email and this password. Share it with them securely.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label={isEdit ? 'New password' : 'Password'}
+              htmlFor="password"
+              required={!isEdit}
+              error={errors.password}
+              hint={`At least ${MIN_PASSWORD} characters.`}
+            >
+              <PasswordInput
+                id="password"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={text('password')}
+                aria-invalid={!!errors.password}
+              />
+              <StrengthMeter password={form.password} />
+            </Field>
+            <Field label="Confirm password" htmlFor="confirm_password" required={!isEdit} error={errors.confirm_password}>
+              <PasswordInput
+                id="confirm_password"
+                autoComplete="new-password"
+                value={form.confirm_password}
+                onChange={text('confirm_password')}
+                aria-invalid={!!errors.confirm_password}
+              />
             </Field>
           </CardContent>
         </Card>
