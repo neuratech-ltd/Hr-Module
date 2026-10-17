@@ -15,6 +15,16 @@ npm install
 npm run dev
 ```
 
+## Default logins
+
+| Role | Email | Password |
+| --- | --- | --- |
+| HR / Admin | admin@neuratech.com | Admin@123 |
+| Employee | employee@neuratech.com | Employee@123 |
+
+Use the matching tab (**HR / Admin** or **Employee**) on the login page. Change these passwords
+after signing in (user menu -> **Change password**).
+
 ## First run
 
 1. Open the app — the login page appears. On the **HR / Admin** tab, click **Create HR / Admin account** to create the first admin (this button disappears once an admin exists).

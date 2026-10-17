@@ -1,7 +1,7 @@
 // In-browser HR data store. Frontend only: every action updates local state
 // (kept in localStorage) so the screens are fully clickable without a backend.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { createInitialData, DEFAULT_DEPARTMENTS, DEFAULT_DESIGNATIONS, type HRData } from '@/data/seed'
+import { createInitialData, DEFAULT_DEPARTMENTS, DEFAULT_DESIGNATIONS, withDefaultAccounts, type HRData } from '@/data/seed'
 import type {
   AttendanceSettings,
   AttendanceStatus,
@@ -26,7 +26,7 @@ function load(): HRData {
       // Older saves started with no departments / designations: add the company lists.
       if (saved.departments.length === 0) saved.departments = DEFAULT_DEPARTMENTS
       if (saved.designations.length === 0) saved.designations = DEFAULT_DESIGNATIONS
-      return saved
+      return withDefaultAccounts(saved)
     }
   } catch {
     // Ignore unreadable storage and start fresh.
