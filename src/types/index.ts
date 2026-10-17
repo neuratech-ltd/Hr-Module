@@ -30,6 +30,7 @@ export interface Designation {
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER'
 export type EmploymentType = 'PERMANENT' | 'CONTRACT' | 'INTERN'
 export type EmployeeStatus = 'ACTIVE' | 'INACTIVE'
+export type BloodGroup = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
 
 export interface EmergencyContact {
   name: string
@@ -51,6 +52,8 @@ export interface Employee {
   status: EmployeeStatus
   address: string
   nid: string
+  /** Optional; empty when not provided. */
+  blood_group: BloodGroup | ''
   emergency_contact: EmergencyContact
   photo: string | null
 }

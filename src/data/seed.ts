@@ -94,6 +94,7 @@ export function withDefaultAccounts(data: HRData): HRData {
         status: 'ACTIVE',
         address: 'Dhaka, Bangladesh',
         nid: '',
+        blood_group: '',
         emergency_contact: { name: '', phone: '' },
         photo: null,
       }

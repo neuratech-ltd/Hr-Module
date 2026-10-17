@@ -122,12 +122,13 @@ export function EmployeesPage() {
 
   const table = (): ExportTable => ({
     title: 'Employee list',
-    columns: ['Employee ID', 'Name', 'Email', 'Phone', 'Department', 'Designation', 'Employment type', 'Joining date', 'Status'],
+    columns: ['Employee ID', 'Name', 'Email', 'Phone', 'Blood group', 'Department', 'Designation', 'Employment type', 'Joining date', 'Status'],
     rows: rows.map((e) => [
       e.employee_id,
       e.full_name,
       e.email,
       e.phone,
+      e.blood_group || '—',
       departmentName(data, e.department),
       designationTitle(data, e.designation),
       EMPLOYMENT_TYPE_LABEL[e.employment_type],

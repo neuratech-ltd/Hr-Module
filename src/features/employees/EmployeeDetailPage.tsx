@@ -32,7 +32,7 @@ import { departmentName, designationTitle, leaveBalances, leaveTypeName } from '
 import { fmtDate } from '@/lib/dates'
 import type { Employee } from '@/types'
 import { EmployeeStatusDialog } from './EmployeesPage'
-import { EMPLOYMENT_TYPE_LABEL, GENDER_LABEL } from '@/lib/labels'
+import { bloodGroupLabel, EMPLOYMENT_TYPE_LABEL, GENDER_LABEL } from '@/lib/labels'
 
 function Detail({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
@@ -68,6 +68,7 @@ function ProfileTab({ employee: e }: { employee: Employee }) {
         <Detail label="Gender">{GENDER_LABEL[e.gender]}</Detail>
         <Detail label="Date of birth">{fmtDate(e.date_of_birth)}</Detail>
         <Detail label="National ID">{e.nid}</Detail>
+        <Detail label="Blood group">{bloodGroupLabel(e.blood_group)}</Detail>
       </Section>
       <Section title="Job details">
         <Detail label="Department">{departmentName(data, e.department)}</Detail>

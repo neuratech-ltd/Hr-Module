@@ -11,8 +11,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { EmptyState, Field, NativeSelect, PageHeader, PersonAvatar } from '@/components/common'
 import { employeeById, nextEmployeeId } from '@/lib/hr'
 import { toISO, todayISO } from '@/lib/dates'
-import type { EmployeeInput, EmploymentType, EmployeeStatus, Gender } from '@/types'
-import { EMPLOYMENT_TYPE_LABEL, GENDER_LABEL } from '@/lib/labels'
+import type { BloodGroup, EmployeeInput, EmploymentType, EmployeeStatus, Gender } from '@/types'
+import { BLOOD_GROUPS, EMPLOYMENT_TYPE_LABEL, GENDER_LABEL } from '@/lib/labels'
 import { MIN_PASSWORD, newPasswordErrors, PasswordInput, StrengthMeter } from '@/features/login/password'
 import { useAuth } from '@/auth/auth'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -24,6 +24,7 @@ interface FormState {
   gender: Gender | ''
   date_of_birth: string
   nid: string
+  blood_group: BloodGroup | ''
   photo: string | null
   department: string
   designation: string
@@ -46,6 +47,7 @@ const EMPTY: FormState = {
   gender: '',
   date_of_birth: '',
   nid: '',
+  blood_group: '',
   photo: null,
   department: '',
   designation: '',
@@ -140,6 +142,7 @@ export function EmployeeFormPage({ selfSignup = false }: { selfSignup?: boolean 
           gender: existing.gender,
           date_of_birth: existing.date_of_birth,
           nid: existing.nid,
+          blood_group: existing.blood_group ?? '',
           photo: existing.photo,
           department: String(existing.department),
           designation: String(existing.designation),
@@ -224,6 +227,7 @@ export function EmployeeFormPage({ selfSignup = false }: { selfSignup?: boolean 
       gender: form.gender as Gender,
       date_of_birth: form.date_of_birth,
       nid: form.nid.trim(),
+      blood_group: form.blood_group,
       photo: form.photo,
       department: Number(form.department),
       designation: Number(form.designation),
@@ -384,8 +388,18 @@ export function EmployeeFormPage({ selfSignup = false }: { selfSignup?: boolean 
                   aria-invalid={!!errors.date_of_birth}
                 />
               </Field>
-              <Field label="National ID (NID)" htmlFor="nid" error={errors.nid} hint="Optional" className="sm:col-span-2">
+              <Field label="National ID (NID)" htmlFor="nid" error={errors.nid} hint="Optional">
                 <Input id="nid" inputMode="numeric" value={form.nid} onChange={text('nid')} aria-invalid={!!errors.nid} />
+              </Field>
+              <Field label="Blood group" htmlFor="blood_group" hint="Optional">
+                <NativeSelect id="blood_group" value={form.blood_group} onChange={text('blood_group')}>
+                  <option value="">Select blood group</option>
+                  {BLOOD_GROUPS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </NativeSelect>
               </Field>
             </div>
           </CardContent>

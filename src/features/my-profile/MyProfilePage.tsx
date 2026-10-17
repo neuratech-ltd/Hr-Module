@@ -10,6 +10,7 @@ import { departmentName, designationTitle } from '@/lib/hr'
 import { fmtDate } from '@/lib/dates'
 import type { Employee } from '@/types'
 import { EditProfileDialog } from './EditProfileDialog'
+import { bloodGroupLabel } from '@/lib/labels'
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024
 
@@ -148,6 +149,7 @@ function MyProfile({ employee }: { employee: Employee }) {
             <Item label="Gender">{title(employee.gender)}</Item>
             <Item label="Date of birth">{fmtDate(employee.date_of_birth)}</Item>
             <Item label="National ID">{employee.nid}</Item>
+            <Item label="Blood group">{bloodGroupLabel(employee.blood_group)}</Item>
             <Item label="Address" wide>
               {employee.address}
             </Item>
