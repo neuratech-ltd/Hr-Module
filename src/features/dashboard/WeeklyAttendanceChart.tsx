@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { endOfWeek, format, parseISO, startOfWeek } from 'date-fns'
+import { format, parseISO, subDays } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useHR } from '@/store/hr-store'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,20 +18,24 @@ const SLICES = [
 ] as const
 type SliceKey = (typeof SLICES)[number]['key']
 
-const R = 42
-const C = 2 * Math.PI * R
-const GAP = 2.2 // surface gap between segments, in px along the ring
+const R = 46 // pie radius in a 100x100 viewBox
 
-/** This week's working days as a donut: present on time, late, absent, on leave. */
+/** SVG path for a pie wedge from angle a0 to a1 (radians, 0 = 12 o'clock, clockwise). */
+function wedge(a0: number, a1: number) {
+  const pt = (a: number) => `${50 + R * Math.sin(a)} ${50 - R * Math.cos(a)}`
+  return `M 50 50 L ${pt(a0)} A ${R} ${R} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${pt(a1)} Z`
+}
+
+/** The last 7 days' working days as a pie: on time, absent, on leave, late. */
 export function WeeklyAttendanceChart({ employee }: { employee: Employee }) {
   const { data } = useHR()
   const [active, setActive] = useState<SliceKey | null>(null)
 
   const week = useMemo(() => {
-    const now = new Date()
-    const start = toISO(startOfWeek(now, { weekStartsOn: 0 }))
-    const end = toISO(endOfWeek(now, { weekStartsOn: 0 }))
+    // Rolling last 7 days, ending today.
     const today = todayISO()
+    const start = toISO(subDays(parseISO(today), 6))
+    const end = today
     const counts: Record<SliceKey, number> = { onTime: 0, late: 0, absent: 0, leave: 0 }
     let daysOff = 0
     for (const date of eachDay(start, end)) {
@@ -51,13 +55,16 @@ export function WeeklyAttendanceChart({ employee }: { employee: Employee }) {
   const present = week.counts.onTime + week.counts.late
   const shown = active ? SLICES.find((s) => s.key === active)! : null
 
-  // Ring segments (with a small gap between neighbours).
+  // Pie wedges, clockwise from 12 o'clock.
   const filled = SLICES.filter((s) => week.counts[s.key] > 0)
-  const segments = filled.map((s, i) => {
-    const len = (week.counts[s.key] / total) * C
-    const offset = filled.slice(0, i).reduce((n, p) => n + (week.counts[p.key] / total) * C, 0)
-    return { ...s, dash: Math.max(0, len - (filled.length === 1 ? 0 : GAP)), offset }
+  const wedges = filled.map((s, i) => {
+    const before = filled.slice(0, i).reduce((n, p) => n + week.counts[p.key], 0)
+    const a0 = (before / total) * 2 * Math.PI
+    const a1 = ((before + week.counts[s.key]) / total) * 2 * Math.PI
+    const mid = (a0 + a1) / 2
+    return { ...s, a0, a1, dx: Math.sin(mid) * 3, dy: -Math.cos(mid) * 3 }
   })
+  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0)
 
   const range = `${format(parseISO(week.start), 'd MMM')} – ${format(parseISO(week.end), 'd MMM')}`
 
@@ -65,56 +72,66 @@ export function WeeklyAttendanceChart({ employee }: { employee: Employee }) {
     <Card>
       <CardHeader>
         <CardTitle>Weekly attendance</CardTitle>
-        <CardDescription>{range}</CardDescription>
+        <CardDescription>Last 7 days · {range}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-center">
-        <div className="relative size-44 shrink-0">
-          <svg
-            viewBox="0 0 100 100"
-            className="size-full -rotate-90"
-            role="img"
-            aria-label={`This week: ${SLICES.map((s) => `${s.label} ${week.counts[s.key]}`).join(', ')}`}
-          >
-            <circle cx="50" cy="50" r={R} fill="none" strokeWidth="12" className="stroke-muted" />
-            {segments.map((s) => (
-              <circle
-                key={s.key}
-                cx="50"
-                cy="50"
-                r={R}
-                fill="none"
-                stroke={s.color}
-                strokeWidth={active === s.key ? 14 : 12}
-                strokeDasharray={`${s.dash} ${C - s.dash}`}
-                strokeDashoffset={-s.offset}
-                className={cn('cursor-pointer transition-[stroke-width,opacity] duration-150', active && active !== s.key && 'opacity-40')}
-                onMouseEnter={() => setActive(s.key)}
-                onMouseLeave={() => setActive(null)}
-              />
-            ))}
-          </svg>
-          <div className="pointer-events-none absolute inset-0 grid place-content-center text-center">
+        <div className="flex shrink-0 flex-col items-center gap-3">
+          <p className="h-10 text-center text-sm leading-tight" aria-live="polite">
             {total === 0 ? (
-              <>
-                <p className="text-sm font-medium">No working days yet</p>
-                <p className="text-xs text-muted-foreground">this week</p>
-              </>
+              <span className="text-muted-foreground">No working days in the last 7 days</span>
             ) : shown ? (
               <>
-                <p className="text-2xl font-semibold tabular-nums">{week.counts[shown.key]}</p>
-                <p className="text-xs text-muted-foreground">{shown.label}</p>
+                <span className="block font-semibold">{shown.label}</span>
+                <span className="text-muted-foreground tabular-nums">
+                  {week.counts[shown.key]} {week.counts[shown.key] === 1 ? 'day' : 'days'} · {pct(week.counts[shown.key])}%
+                </span>
               </>
             ) : (
               <>
-                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Present</p>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {present}
-                  <span className="text-base text-muted-foreground">/{total}</span>
-                </p>
-                <p className="text-[11px] text-muted-foreground">{format(new Date(), 'd/M/yyyy')}</p>
+                <span className="block font-semibold text-emerald-700 dark:text-emerald-400">Present</span>
+                <span className="text-muted-foreground tabular-nums">
+                  {present} of {total} working {total === 1 ? 'day' : 'days'}
+                </span>
               </>
             )}
-          </div>
+          </p>
+          <svg
+            viewBox="-4 -4 108 108"
+            className="size-44 overflow-visible"
+            role="img"
+            aria-label={`Last 7 days: ${SLICES.map((s) => `${s.label} ${week.counts[s.key]}`).join(', ')}`}
+          >
+            {total === 0 ? (
+              <circle cx="50" cy="50" r={R} className="fill-muted" />
+            ) : wedges.length === 1 ? (
+              <circle
+                cx="50"
+                cy="50"
+                r={R}
+                fill={wedges[0]!.color}
+                className="cursor-pointer"
+                onMouseEnter={() => setActive(wedges[0]!.key)}
+                onMouseLeave={() => setActive(null)}
+              />
+            ) : (
+              wedges.map((w) => (
+                <path
+                  key={w.key}
+                  d={wedge(w.a0, w.a1)}
+                  fill={w.color}
+                  strokeWidth={1.5}
+                  strokeLinejoin="round"
+                  className={cn(
+                    'cursor-pointer stroke-card transition-[transform,opacity] duration-150',
+                    active && active !== w.key && 'opacity-40',
+                  )}
+                  style={{ transform: active === w.key ? `translate(${w.dx}px, ${w.dy}px)` : undefined }}
+                  onMouseEnter={() => setActive(w.key)}
+                  onMouseLeave={() => setActive(null)}
+                />
+              ))
+            )}
+          </svg>
         </div>
 
         <ul className="grid w-full max-w-56 gap-1">
